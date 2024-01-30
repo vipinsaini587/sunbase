@@ -14,9 +14,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 
 @Service
@@ -34,8 +32,12 @@ public class CustomerRegistrationServiceImpl implements CustomerRegistrationServ
             responseModel.setMessage(customerValidationResponse.getMessage());
             return responseModel;
         }
+        // Generate a random long value
+        long randomId = System.currentTimeMillis();
 
-            BeanUtils.copyProperties(customerRegistrationDetailsDto, customerRegistration);
+
+        BeanUtils.copyProperties(customerRegistrationDetailsDto, customerRegistration);
+            customerRegistration.setUuid(randomId+"");
             CustomerRegistration returnedCustomerRegistration = customerRegistrationRepo.save(customerRegistration);
             if (!(returnedCustomerRegistration == null)) {
                 responseModel.setStatusCode(Constants.successCode);
@@ -85,7 +87,7 @@ public class CustomerRegistrationServiceImpl implements CustomerRegistrationServ
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + token);
         System.out.println("token : "+token);
-        String url = "https://qa.sunbasedata.com/sunbase/portal/api/assignment.jsp";
+        String url = "https://qa.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=get_customer_list";
         HttpEntity<String> requestEntity = new HttpEntity<>(headers);
         RestTemplate restTemplate = new RestTemplate();
         try {
@@ -94,13 +96,20 @@ public class CustomerRegistrationServiceImpl implements CustomerRegistrationServ
 
             System.out.println("responseEntity : "+responseEntity);
             List<CustomerDataDto> customerDataList = responseEntity.getBody();
+            System.out.println(customerDataList);
 
      // save the customers received from remote api
             for(CustomerDataDto customer:customerDataList){
+
+                Optional<CustomerRegistration> existingCustomerRegistration = customerRegistrationRepo.findByUuid(customer.getUuid());
+                if (existingCustomerRegistration.isPresent()) {
+                    continue;
+                }
                 CustomerRegistration customerRegistration = new CustomerRegistration();
                 BeanUtils.copyProperties(customer,customerRegistration);
                 customerRegistrationRepo.save(customerRegistration);
             }
+            responseModel.setMessage("Syncing completed successfully!");
         }catch (Exception e){
             e.printStackTrace();
             responseModel.setMessage("Exception from remote api");
