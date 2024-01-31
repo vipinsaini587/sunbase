@@ -101,6 +101,8 @@ public class CustomerRegistrationServiceImpl implements CustomerRegistrationServ
      // save the customers received from remote api
             for(CustomerDataDto customer:customerDataList){
 
+            // existence of fetched customer is being checked on behalf of their uuid only
+                // it can be done on other field or multiple fields
                 Optional<CustomerRegistration> existingCustomerRegistration = customerRegistrationRepo.findByUuid(customer.getUuid());
                 if (existingCustomerRegistration.isPresent()) {
                     continue;
